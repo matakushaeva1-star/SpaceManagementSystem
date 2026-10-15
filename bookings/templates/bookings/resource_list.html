@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Бронирование ресурсов</title>
+    <link rel="stylesheet" href="{% static 'bookings/style.css' %}">
+</head>
+<body class="main-body">
+    <div class="container">
+        <div class="top-bar">
+            <div class="user-info">
+                {% if user.is_authenticated %}
+                    <span style="font-weight: bold;">Сотрудник: {{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="btn-logout">Выйти</a>
+                {% else %}
+                    <div class="auth-buttons">
+                        <a href="{% url 'login' %}" class="btn-login">Войти</a>
+                        <a href="{% url 'register' %}" class="btn-register">Регистрация</a>
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <a href="{% url 'user_bookings' %}" class="btn-cabinet">Мой кабинет (Бронирования)</a>
+            </div>
+        </div>
+
+        <h1>Доступные офисные ресурсы</h1>
+        <div class="filter-container">
+    <button class="btn-filter active" data-filter="all">Все ресурсы</button>
+    <button class="btn-filter" data-filter="room">Переговорные</button>
+    <button class="btn-filter" data-filter="parking">Парковки</button>
+        </div>
+
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {% if message.tags == 'error' %}error{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% for resource in resources %}
+            <div class="card" data-type="{{ resource.resource_type }}">
+                <h2>{{ resource.name }}</h2>
+                <span class="badge {% if resource.resource_type == 'parking' %}parking{% endif %}">
+                    {{ resource.get_resource_type_display }}
+                </span>
+                <p>{{ resource.description }}</p>
+
+                <form action="{% url 'book_resource' resource.id %}" method="POST" class="booking-form">
+                    {% csrf_token %}
+                    <label>Выберите дату:</label>
+                    <input type="date" name="booking_date" required class="date-picker">
+                    <button type="submit" class="btn-book">Забронировать</button>
+                </form>
+            </div>
+        {% empty %}
+            <p>Доступных ресурсов пока нет. Добавьте их через панель администратора!</p>
+        {% endfor %}
+    </div>
+
+    <script>
+    // 1. Блокировка прошедших дат в календаре
+    document.querySelectorAll('.date-picker').forEach(input => {
+        const today = new Date().toISOString().split('T');
+        input.min = today;
+    });
+
+    // 2. Интерактивная фильтрация ресурсов без перезагрузки страницы
+    const filterButtons = document.querySelectorAll('.btn-filter');
+    const resourceCards = document.querySelectorAll('.card');
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Переключаем класс активности на кнопках
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            const filterValue = button.getAttribute('data-filter');
+
+            // Фильтруем карточки
+            resourceCards.forEach(card => {
+                const cardType = card.getAttribute('data-type');
+
+                if (filterValue === 'all' || cardType === filterValue) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
+    });
+    </script>
+
+</body>
+</html>
